@@ -5,7 +5,91 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Jansecat | Aventura dos Verbos – 6º Ano</title>
 <meta name="google-adsense-account" content="ca-pub-7075539323461837">
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7075539323461837" crossorigin="anonymous"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7075539323461837" crossorigin="anonymous">
+// ══ SUPABASE RANKING ══
+const SB_URL='https://ebszfzuqkdmzbxnvhmzz.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVic3pmenVxa2RtemJ4bnZobXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6MjAwMDAwMDAwMH0.placeholder';
+// Uses public REST — no auth needed for anon insert/select
+// TABLE: verb_ranking (id, name, score, correct, mode, created_at)
+
+let playerName='';
+
+function goToName(){showScreen('namescreen');setTimeout(()=>document.getElementById('player-name').focus(),200);}
+
+function confirmName(){
+  const n=document.getElementById('player-name').value.trim();
+  if(!n){document.getElementById('player-name').style.borderColor='#e63946';setTimeout(()=>document.getElementById('player-name').style.borderColor='',800);return;}
+  playerName=n;startGame();
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('namescreen').classList.contains('active'))confirmName();
+});
+
+async function saveScore(){
+  if(!playerName)return;
+  try{
+    await fetch(SB_URL+'/rest/v1/verb_ranking',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=minimal'},
+      body:JSON.stringify({name:playerName,score:score,correct:correct,mode:mode,created_at:new Date().toISOString()})
+    });
+  }catch(e){console.warn('Ranking offline',e);}
+}
+
+async function getMyRank(){
+  try{
+    const r=await fetch(SB_URL+'/rest/v1/verb_ranking?select=score&order=score.desc',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    const data=await r.json();
+    if(!Array.isArray(data))return null;
+    const pos=data.findIndex(d=>d.score<=score);
+    return {pos:pos===-1?data.length+1:pos+1,total:data.length};
+  }catch(e){return null;}
+}
+
+async function loadRanking(filter,tabEl){
+  document.querySelectorAll('.rank-tab').forEach(t=>t.classList.remove('active'));
+  if(tabEl)tabEl.classList.add('active');
+  const list=document.getElementById('rank-list');
+  list.innerHTML='<div class="rank-loading">Carregando... ⏳</div>';
+  try{
+    let url=SB_URL+'/rest/v1/verb_ranking?select=name,score,correct,mode,created_at&order=score.desc&limit=20';
+    if(filter==='today'){
+      const today=new Date();today.setHours(0,0,0,0);
+      url+='&created_at=gte.'+today.toISOString();
+    }
+    const r=await fetch(url,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    const data=await r.json();
+    if(!Array.isArray(data)||data.length===0){
+      list.innerHTML='<div class="rank-empty"><div style="font-size:48px">🎮</div><div>Nenhum jogador ainda.<br>Seja o primeiro!</div></div>';
+      return;
+    }
+    const medals=['🥇','🥈','🥉'];
+    const posClass=['gold','silver','bronze'];
+    list.innerHTML=data.map((d,i)=>{
+      const isMe=d.name===playerName;
+      const medal=i<3?medals[i]:'#'+(i+1);
+      const pc=i<3?posClass[i]:'other';
+      const avatar=['🦁','🐯','🦊','🐺','🐻','🦝','🐸','🦄','🐙','🐬'][i%10];
+      const modeLabel={mix:'Misto',identify:'Identificar',conjugate:'Conjugar',classify:'Classificar'}[d.mode]||d.mode||'Misto';
+      const date=new Date(d.created_at).toLocaleDateString('pt-BR');
+      return `<div class="rank-item${isMe?' me':''}">
+        <div class="rank-pos ${pc}">${medal}</div>
+        <div class="rank-avatar">${avatar}</div>
+        <div class="rank-info">
+          <div class="rank-name">${d.name}${isMe?' 👈':''}</div>
+          <div class="rank-meta">${modeLabel} • ${d.correct||0} acertos • ${date}</div>
+        </div>
+        <div class="rank-score">${d.score}</div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    list.innerHTML='<div class="rank-empty"><div style="font-size:40px">📡</div><div>Sem conexão com o ranking.<br>Tente novamente.</div></div>';
+  }
+}
+
+function openRanking(){showScreen('ranking');loadRanking('all',document.querySelector('.rank-tab'));}
+
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
 :root{--sun:#f9ca24;--accent:#ff6b6b;--teal:#00cec9;--pink:#fd79a8;--orange:#e17055;--purple:#6c5ce7;--green:#00b894;--radius:18px;}
@@ -96,6 +180,8 @@ body{font-family:'Nunito',sans-serif;background:linear-gradient(180deg,#0f1547 0
 .stat-box .sk{font-size:11px;color:#94a3b8;margin-top:2px;}
 .particle{position:fixed;pointer-events:none;z-index:999;font-size:22px;animation:particleFly 1s ease-out forwards;}
 @keyframes particleFly{from{opacity:1;transform:translate(0,0) scale(1)}to{opacity:0;transform:translate(var(--dx),var(--dy)) scale(0)}}
+
+
 </style>
 </head>
 <body>
@@ -202,7 +288,21 @@ body{font-family:'Nunito',sans-serif;background:linear-gradient(180deg,#0f1547 0
     <div class="stat-box"><div class="sv" id="r-wrong">0</div><div class="sk">Erros</div></div>
     <div class="stat-box"><div class="sv" id="r-combo">0</div><div class="sk">Combo máx.</div></div>
   </div>
-  <button class="btn-start" onclick="restartGame()" style="margin-top:8px">JOGAR NOVAMENTE 🔄</button>
+  <button class="btn-start" onclick="restartGame()">JOGAR NOVAMENTE 🔄</button>
+</div>
+
+
+    <div class="rank-tabs">
+      <button class="rank-tab active" onclick="loadRanking('all',this)">Geral</button>
+      <button class="rank-tab" onclick="loadRanking('today',this)">Hoje</button>
+    </div>
+    <div class="rank-list" id="rank-list">
+      <div class="rank-loading">Carregando... ⏳</div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn-start" onclick="showScreen('namescreen')" style="font-size:16px;padding:12px 28px;">← Voltar</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -255,6 +355,39 @@ const QUESTIONS=[
   {type:'classify',scene:'🎠',text:'Qual o tempo verbal?\n"Nós <strong>brincaremos</strong> no parque depois da aula."',tag:'📚 Tempo Verbal',options:['Pretérito Perfeito','Presente','Pretérito Imperfeito','Futuro do Presente'],correct:3,explanation:'BRINCAREMOS — Futuro do Presente, plano para depois.',glow:'#a29bfe22'},
   {type:'classify',scene:'🔑',text:'Que forma verbal é esta:\n"<strong>Estudar</strong> é muito importante."?',tag:'📚 Forma Verbal',options:['Gerúndio','Particípio','Infinitivo','Imperativo'],correct:2,explanation:'ESTUDAR — Infinitivo, forma nominal sem conjugação.',glow:'#27ae6022'},
   {type:'classify',scene:'🎤',text:'Que modo verbal é este:\n"<strong>Cante</strong> mais alto!"?',tag:'📚 Modo Verbal',options:['Indicativo','Subjuntivo','Imperativo','Condicional'],correct:2,explanation:'CANTE — Modo Imperativo, expressa ordem ou pedido.',glow:'#e6394622'},
+  // ── NOVOS: IDENTIFICAR ──
+  {type:'identify',scene:'🎯',text:'Encontre o <strong>VERBO</strong>:\n"A professora <u>explicou</u> a matéria com clareza."',tag:'🔍 Identificação',options:['professora','matéria','clareza','explicou'],correct:3,explanation:'EXPLICOU é o verbo — ação da professora no passado.',glow:'#6c5ce722'},
+  {type:'identify',scene:'🌵',text:'Qual é o <strong>VERBO</strong>?\n"O deserto <u>esquenta</u> muito durante o dia."',tag:'🔍 Identificação',options:['deserto','muito','dia','esquenta'],correct:3,explanation:'ESQUENTA é o verbo — processo que ocorre no presente.',glow:'#e1705522'},
+  {type:'identify',scene:'🎠',text:'Encontre o <strong>VERBO</strong>:\n"As crianças <u>brincaram</u> no parque a tarde toda."',tag:'🔍 Identificação',options:['crianças','parque','tarde','brincaram'],correct:3,explanation:'BRINCARAM é o verbo — ação concluída no passado.',glow:'#fd79a822'},
+  {type:'identify',scene:'🐟',text:'Qual é o <strong>VERBO</strong>?\n"O peixe <u>nada</u> rapidamente no rio."',tag:'🔍 Identificação',options:['peixe','rapidamente','rio','nada'],correct:3,explanation:'NADA é o verbo — ação do peixe no presente.',glow:'#00cec922'},
+  {type:'identify',scene:'🌅',text:'Encontre o <strong>VERBO</strong>:\n"O sol <u>nasce</u> todos os dias no leste."',tag:'🔍 Identificação',options:['sol','todos','leste','nasce'],correct:3,explanation:'NASCE é o verbo — processo natural habitual no presente.',glow:'#f9ca2422'},
+  {type:'identify',scene:'🍦',text:'Qual é o <strong>VERBO</strong>?\n"Ana <u>derramou</u> o sorvete na calçada."',tag:'🔍 Identificação',options:['Ana','sorvete','calçada','derramou'],correct:3,explanation:'DERRAMOU é o verbo — ação acidental de Ana no passado.',glow:'#a29bfe22'},
+  {type:'identify',scene:'🏰',text:'Encontre o <strong>VERBO</strong>:\n"O rei <u>construiu</u> um castelo enorme."',tag:'🔍 Identificação',options:['rei','castelo','enorme','construiu'],correct:3,explanation:'CONSTRUIU é o verbo — ação concluída pelo rei.',glow:'#27ae6022'},
+  {type:'identify',scene:'🎹',text:'Qual é o <strong>VERBO</strong>?\n"Ele <u>toca</u> piano desde criança."',tag:'🔍 Identificação',options:['piano','criança','desde','toca'],correct:3,explanation:'TOCA é o verbo — hábito que continua no presente.',glow:'#00b89422'},
+  {type:'identify',scene:'🦋',text:'Encontre o <strong>VERBO</strong>:\n"A borboleta <u>pousou</u> na flor amarela."',tag:'🔍 Identificação',options:['borboleta','flor','amarela','pousou'],correct:3,explanation:'POUSOU é o verbo — ação pontual da borboleta no passado.',glow:'#e6394622'},
+  {type:'identify',scene:'⛰️',text:'Qual é o <strong>VERBO</strong>?\n"Os montanhistas <u>subirão</u> ao cume amanhã."',tag:'🔍 Identificação',options:['montanhistas','cume','amanhã','subirão'],correct:3,explanation:'SUBIRÃO é o verbo — ação que vai acontecer no futuro.',glow:'#457b9d22'},
+  // ── NOVOS: CONJUGAR ──
+  {type:'conjugate',scene:'🐈',text:'Complete:\n"O gato ___ no sofá toda tarde." (DORMIR)',tag:'✏️ Conjugação',options:['dorme','dormiu','dormia','dormirá'],correct:0,explanation:'"DORME" — DORMIR na 3ª pessoa singular do Presente, hábito.',glow:'#a29bfe22'},
+  {type:'conjugate',scene:'🌧️',text:'Futuro:\n"Semana que vem, eu ___ o quarto." (LIMPAR)',tag:'✏️ Conjugação — Futuro',options:['limpei','limpava','limpo','limparei'],correct:3,explanation:'"LIMPAREI" — Futuro do Presente de LIMPAR, 1ª pessoa singular.',glow:'#00cec922'},
+  {type:'conjugate',scene:'👩‍🍳',text:'Passado:\n"Minha avó ___ um bolo delicioso." (ASSAR)',tag:'✏️ Conjugação — Passado',options:['assa','assará','assou','assava'],correct:2,explanation:'"ASSOU" — Pretérito Perfeito de ASSAR, ação concluída.',glow:'#e17055aa'},
+  {type:'conjugate',scene:'🎒',text:'Imperfeito:\n"Quando era pequeno, eu ___ mochila azul." (USAR)',tag:'✏️ Conjugação — Imperfeito',options:['uso','usei','usava','usarei'],correct:2,explanation:'"USAVA" — Pretérito Imperfeito de USAR, hábito passado.',glow:'#6c5ce722'},
+  {type:'conjugate',scene:'🦜',text:'Complete:\n"Os papagaios ___ muitas palavras." (REPETIR)',tag:'✏️ Conjugação',options:['repito','repete','repetiam','repetem'],correct:3,explanation:'"REPETEM" — REPETIR na 3ª pessoa plural do Presente.',glow:'#27ae6022'},
+  {type:'conjugate',scene:'🚴',text:'Futuro:\n"Nós ___ de bicicleta no domingo." (PEDALAR)',tag:'✏️ Conjugação — Futuro',options:['pedalamos','pedalaremos','pedalávamos','pedalei'],correct:1,explanation:'"PEDALAREMOS" — Futuro do Presente, 1ª pessoa plural.',glow:'#fd79a822'},
+  {type:'conjugate',scene:'📷',text:'Passado:\n"Ele ___ muitas fotos na viagem." (TIRAR)',tag:'✏️ Conjugação — Passado',options:['tirou','tira','tirará','tirava'],correct:0,explanation:'"TIROU" — Pretérito Perfeito de TIRAR, ação concluída.',glow:'#f9ca2422'},
+  {type:'conjugate',scene:'🌺',text:'Imperfeito:\n"Ela sempre ___ flores no jardim." (PLANTAR)',tag:'✏️ Conjugação — Imperfeito',options:['planta','plantou','plantará','plantava'],correct:3,explanation:'"PLANTAVA" — Pretérito Imperfeito, hábito que se repetia.',glow:'#00b89422'},
+  {type:'conjugate',scene:'🧪',text:'Complete:\n"Você ___ que estudar mais." (PRECISAR)',tag:'✏️ Conjugação',options:['preciso','precisa','precisas','precisam'],correct:1,explanation:'"PRECISA" — PRECISAR na 2ª ou 3ª pessoa singular do Presente.',glow:'#e1705522'},
+  {type:'conjugate',scene:'🎻',text:'Passado:\n"A orquestra ___ por duas horas." (TOCAR)',tag:'✏️ Conjugação — Passado',options:['toca','tocou','tocará','tocava'],correct:1,explanation:'"TOCOU" — Pretérito Perfeito de TOCAR, ação concluída.',glow:'#a29bfe22'},
+  {type:'conjugate',scene:'🌊',text:'Futuro:\n"Amanhã nós ___ na praia." (MERGULHAR)',tag:'✏️ Conjugação — Futuro',options:['mergulhamos','mergulhávamos','mergulharemos','mergulhei'],correct:2,explanation:'"MERGULHAREMOS" — Futuro do Presente, 1ª pessoa plural.',glow:'#457b9d22'},
+  {type:'conjugate',scene:'🦊',text:'Complete:\n"A raposa ___ as galinhas à noite." (PERSEGUIR)',tag:'✏️ Conjugação',options:['persegue','perseguiu','perseguia','perseguirá'],correct:0,explanation:'"PERSEGUE" — PERSEGUIR na 3ª pessoa singular do Presente.',glow:'#e6394622'},
+  // ── NOVOS: CLASSIFICAR ──
+  {type:'classify',scene:'🏄',text:'Em que tempo está o verbo?\n"Ele <strong>surfou</strong> por três horas ontem."',tag:'📚 Tempo Verbal',options:['Presente','Futuro','Pretérito Imperfeito','Pretérito Perfeito'],correct:3,explanation:'SURFOU — Pretérito Perfeito, ação pontual e concluída.',glow:'#00cec922'},
+  {type:'classify',scene:'🎈',text:'Qual o tempo verbal?\n"As crianças <strong>ganharão</strong> presentes no Natal."',tag:'📚 Tempo Verbal',options:['Presente','Pretérito Perfeito','Pretérito Imperfeito','Futuro do Presente'],correct:3,explanation:'GANHARÃO — Futuro do Presente, evento que ainda virá.',glow:'#fd79a822'},
+  {type:'classify',scene:'🌿',text:'Classifique o verbo:\n"Meu pai <strong>plantava</strong> verduras no sítio."',tag:'📚 Tempo Verbal',options:['Presente','Pretérito Perfeito','Pretérito Imperfeito','Futuro'],correct:2,explanation:'PLANTAVA — Pretérito Imperfeito, hábito que se repetia.',glow:'#27ae6022'},
+  {type:'classify',scene:'🏋️',text:'Qual o tempo verbal?\n"Ela <strong>treina</strong> musculação três vezes por semana."',tag:'📚 Tempo Verbal',options:['Pretérito Perfeito','Futuro','Pretérito Imperfeito','Presente do Indicativo'],correct:3,explanation:'TREINA — Presente do Indicativo, hábito atual.',glow:'#e1705522'},
+  {type:'classify',scene:'🚣',text:'Identifique o tempo:\n"Eles <strong>remaram</strong> até o outro lado do lago."',tag:'📚 Tempo Verbal',options:['Presente','Pretérito Perfeito','Futuro','Pretérito Imperfeito'],correct:1,explanation:'REMARAM — Pretérito Perfeito, ação concluída.',glow:'#6c5ce722'},
+  {type:'classify',scene:'🌠',text:'Classifique:\n"Eu <strong>desejava</strong> ser astronauta quando criança."',tag:'📚 Tempo Verbal',options:['Presente','Pretérito Perfeito','Futuro','Pretérito Imperfeito'],correct:3,explanation:'DESEJAVA — Pretérito Imperfeito, desejo que existia no passado.',glow:'#a29bfe22'},
+  {type:'classify',scene:'🦅',text:'Qual o tempo verbal?\n"A águia <strong>sobrevoará</strong> o vale ao amanhecer."',tag:'📚 Tempo Verbal',options:['Presente','Pretérito Perfeito','Pretérito Imperfeito','Futuro do Presente'],correct:3,explanation:'SOBREVOARÁ — Futuro do Presente, ação que ainda vai ocorrer.',glow:'#00b89422'},
+  {type:'classify',scene:'🎻',text:'Classifique o verbo:\n"Ela <strong>aprende</strong> violino com dedicação."',tag:'📚 Tempo Verbal',options:['Pretérito Perfeito','Presente do Indicativo','Futuro','Pretérito Imperfeito'],correct:1,explanation:'APRENDE — Presente do Indicativo, processo atual e contínuo.',glow:'#f9ca2422'},
 ];
 
 const TOTAL=15;

@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aventura dos Verbos – 6º Ano</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sky: #1a1f5e;
+  --sky2: #2d3a8c;
+  --grass: #27ae60;
+  --sun: #f9ca24;
+  --accent: #ff6b6b;
+  --teal: #00cec9;
+  --pink: #fd79a8;
+  --orange: #e17055;
+  --card-bg: #ffffff;
+  --radius: 18px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:'Nunito',sans-serif;
+  background: linear-gradient(180deg, #0f1547 0%, #1a1f5e 40%, #2d6a4f 100%);
+  min-height:100vh; overflow-x:hidden; color:#fff;
+}
+
+/* ───── SCREENS ───── */
+.screen{display:none;min-height:100vh;}
+.screen.active{display:flex;flex-direction:column;align-items:center;}
+
+/* ───── STARS BG ───── */
+.stars{position:fixed;inset:0;pointer-events:none;z-index:0;}
+.star{position:absolute;border-radius:50%;background:#fff;animation:twinkle var(--d,2s) ease-in-out infinite;}
+@keyframes twinkle{0%,100%{opacity:.2;transform:scale(1)}50%{opacity:1;transform:scale(1.4)}}
+
+/* ───── SPLASH ───── */
+#splash{justify-content:center;gap:0;position:relative;}
+.splash-scene{position:relative;width:100%;max-width:480px;height:320px;margin-top:20px;}
+
+/* Mountains */
+.mountain{position:absolute;bottom:0;}
+.mtn1{left:-10px;width:220px;height:160px;background:linear-gradient(180deg,#3d5a80,#1d3557);clip-path:polygon(50% 0%,100% 100%,0% 100%);}
+.mtn2{right:-10px;width:200px;height:140px;background:linear-gradient(180deg,#457b9d,#1d3557);clip-path:polygon(50% 0%,100% 100%,0% 100%);}
+.mtn3{left:50%;transform:translateX(-50%);width:260px;height:190px;background:linear-gradient(180deg,#e63946,#c1121f);clip-path:polygon(50% 0%,100% 100%,0% 100%);}
+
+/* Moon */
+.moon{position:absolute;top:20px;right:40px;width:60px;height:60px;border-radius:50%;background:var(--sun);box-shadow:0 0 30px #f9ca2488;animation:moonpulse 3s ease-in-out infinite;}
+@keyframes moonpulse{0%,100%{box-shadow:0 0 30px #f9ca2488}50%{box-shadow:0 0 60px #f9ca24cc}}
+
+/* Hero character */
+.hero{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);animation:heroBob 2s ease-in-out infinite;}
+@keyframes heroBob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-8px)}}
+
+/* Clouds */
+.cloud{position:absolute;background:rgba(255,255,255,.15);border-radius:50px;animation:drift var(--spd,8s) linear infinite;}
+@keyframes drift{from{transform:translateX(-120px)}to{transform:translateX(calc(100vw + 120px))}}
+
+.game-title{
+  font-family:'Fredoka One',cursive;
+  font-size:clamp(38px,10vw,64px);
+  letter-spacing:2px;
+  text-align:center;
+  color:#fff;
+  text-shadow: 3px 3px 0 #e63946, 6px 6px 0 #c1121f;
+  line-height:1.1;
+  z-index:2;position:relative;
+  animation: titleDrop .6s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes titleDrop{from{opacity:0;transform:translateY(-40px)}to{opacity:1;transform:translateY(0)}}
+.game-sub{font-size:16px;color:#a8dadc;letter-spacing:3px;text-transform:uppercase;z-index:2;position:relative;margin-top:4px;}
+
+.btn-start{
+  background:linear-gradient(135deg,#ff6b6b,#e63946);
+  border:none;border-radius:50px;padding:18px 52px;
+  font-family:'Fredoka One',cursive;font-size:24px;color:#fff;
+  cursor:pointer;letter-spacing:1px;
+  box-shadow:0 8px 0 #c1121f, 0 12px 30px #e6394688;
+  transition:transform .1s,box-shadow .1s;
+  z-index:2;position:relative;margin-top:8px;
+}
+.btn-start:hover{transform:translateY(-3px);box-shadow:0 11px 0 #c1121f,0 16px 40px #e63946aa;}
+.btn-start:active{transform:translateY(4px);box-shadow:0 4px 0 #c1121f,0 6px 20px #e6394688;}
+
+.mode-row{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;z-index:2;position:relative;margin-top:4px;}
+.mode-btn{
+  background:#ffffff18;border:2px solid #ffffff33;border-radius:14px;
+  padding:14px 22px;text-align:center;cursor:pointer;transition:all .2s;
+  min-width:130px;
+}
+.mode-btn:hover{background:#ffffff28;border-color:var(--sun);transform:translateY(-4px);}
+.mode-btn.selected{background:#f9ca2422;border-color:var(--sun);box-shadow:0 0 0 3px #f9ca2444;}
+.mode-btn .mode-icon{font-size:32px;display:block;margin-bottom:4px;}
+.mode-btn .mode-name{font-weight:700;font-size:14px;}
+.mode-btn .mode-desc{font-size:11px;color:#94a3b8;margin-top:2px;}
+
+/* ───── HUD ───── */
+.hud{
+  display:flex;align-items:center;justify-content:space-between;
+  width:100%;max-width:680px;padding:12px 16px;
+  background:#ffffff0d;border-radius:0 0 20px 20px;
+  position:sticky;top:0;z-index:50;backdrop-filter:blur(8px);
+  border-bottom:1px solid #ffffff15;
+}
+.hud-stat{display:flex;align-items:center;gap:6px;font-weight:700;font-size:15px;}
+.hud-stat .icon{font-size:20px;}
+.hud-life{color:#ff6b6b;}
+.hud-score{color:var(--sun);}
+.hud-level{color:var(--teal);}
+.progress-wrap{flex:1;margin:0 12px;height:10px;background:#ffffff22;border-radius:10px;overflow:hidden;}
+.progress-bar{height:100%;background:linear-gradient(90deg,#00cec9,#6c5ce7);border-radius:10px;transition:width .4s;}
+
+/* ───── GAME AREA ───── */
+#game{justify-content:flex-start;padding-bottom:40px;}
+.game-content{width:100%;max-width:680px;padding:20px 16px;display:flex;flex-direction:column;gap:20px;}
+
+/* Question card */
+.q-card{
+  background:linear-gradient(135deg,#ffffff0f,#ffffff05);
+  border:2px solid #ffffff22;border-radius:var(--radius);
+  padding:24px 20px;text-align:center;
+  position:relative;overflow:hidden;
+}
+.q-card::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 80% 20%, var(--accent-glow,#ff6b6b22) 0%,transparent 60%);
+  pointer-events:none;
+}
+.q-number{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:3px;margin-bottom:8px;}
+.q-scene{font-size:64px;margin:10px 0;filter:drop-shadow(0 4px 12px rgba(0,0,0,.4));animation:scenePop .4s cubic-bezier(.34,1.56,.64,1) both;}
+@keyframes scenePop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+.q-text{font-size:18px;line-height:1.5;color:#e2e8f0;margin:8px 0;}
+.q-text strong{color:var(--sun);font-size:22px;}
+.q-tag{display:inline-block;background:#6c5ce722;border:1px solid #6c5ce7;border-radius:20px;padding:3px 12px;font-size:11px;color:#a29bfe;margin-top:6px;letter-spacing:1px;}
+
+/* Answers */
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.ans-btn{
+  background:linear-gradient(135deg,#ffffff12,#ffffff06);
+  border:2px solid #ffffff25;border-radius:14px;
+  padding:16px 14px;cursor:pointer;
+  font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;color:#fff;
+  transition:all .15s;text-align:left;
+  display:flex;align-items:center;gap:10px;
+  position:relative;overflow:hidden;
+}
+.ans-btn::before{content:'';position:absolute;inset:0;background:#fff;opacity:0;transition:opacity .15s;}
+.ans-btn:hover{border-color:#ffffff55;transform:translateY(-2px);box-shadow:0 8px 24px #0004;}
+.ans-btn:hover::before{opacity:.04;}
+.ans-btn .ans-letter{
+  width:30px;height:30px;border-radius:50%;background:#ffffff15;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:900;flex-shrink:0;
+}
+.ans-btn.correct{background:linear-gradient(135deg,#00b894,#00cec9);border-color:#00cec9;animation:correctPop .4s cubic-bezier(.34,1.56,.64,1);}
+.ans-btn.wrong{background:linear-gradient(135deg,#e17055,#d63031);border-color:#d63031;animation:shake .3s;}
+.ans-btn.reveal{background:linear-gradient(135deg,#00b89422,#00cec922);border-color:#00cec966;}
+@keyframes correctPop{0%{transform:scale(1)}40%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* Feedback */
+.feedback{
+  border-radius:14px;padding:16px 18px;
+  display:none;animation:slideUp .3s ease both;
+}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.feedback.show{display:flex;gap:12px;align-items:flex-start;}
+.feedback.ok{background:#00b89422;border:1.5px solid #00b894;}
+.feedback.bad{background:#e1705522;border:1.5px solid #e17055;}
+.feedback-icon{font-size:28px;flex-shrink:0;}
+.feedback-title{font-weight:900;font-size:16px;margin-bottom:3px;}
+.feedback-text{font-size:13px;color:#cbd5e1;line-height:1.5;}
+.feedback.ok .feedback-title{color:#00b894;}
+.feedback.bad .feedback-title{color:#e17055;}
+
+.btn-next{
+  background:linear-gradient(135deg,#6c5ce7,#a29bfe);
+  border:none;border-radius:50px;padding:14px 40px;
+  font-family:'Fredoka One',cursive;font-size:20px;color:#fff;
+  cursor:pointer;box-shadow:0 6px 0 #4834d4,0 10px 24px #6c5ce788;
+  transition:all .1s;align-self:center;margin-top:4px;
+  display:none;
+}
+.btn-next.show{display:block;}
+.btn-next:hover{transform:translateY(-2px);box-shadow:0 8px 0 #4834d4,0 14px 28px #6c5ce7aa;}
+.btn-next:active{transform:translateY(3px);box-shadow:0 3px 0 #4834d4,0 6px 16px #6c5ce788;}
+
+/* Combo badge */
+.combo{
+  position:fixed;top:70px;right:16px;z-index:100;
+  background:linear-gradient(135deg,var(--sun),#e17055);
+  border-radius:12px;padding:8px 16px;font-weight:900;font-size:16px;
+  color:#1a1a1a;box-shadow:0 4px 16px #f9ca2466;
+  display:none;animation:comboPop .4s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes comboPop{from{opacity:0;transform:scale(.5) translateY(-20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+
+/* ───── WIN / RESULT ───── */
+#result{justify-content:center;gap:20px;text-align:center;padding:40px 20px;}
+.result-trophy{font-size:100px;animation:trophySpin 1s ease-in-out both;}
+@keyframes trophySpin{from{opacity:0;transform:scale(0) rotate(-180deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+.result-title{font-family:'Fredoka One',cursive;font-size:48px;color:var(--sun);text-shadow:3px 3px 0 #e17055;}
+.result-score-big{font-family:'Fredoka One',cursive;font-size:64px;color:#fff;}
+.result-stars{font-size:40px;letter-spacing:4px;margin:4px 0;}
+.result-msg{font-size:16px;color:#a8dadc;max-width:320px;line-height:1.6;}
+.result-stats{
+  display:flex;gap:16px;flex-wrap:wrap;justify-content:center;
+}
+.stat-box{background:#ffffff12;border:1.5px solid #ffffff22;border-radius:14px;padding:14px 20px;min-width:110px;}
+.stat-box .sv{font-family:'Fredoka One',cursive;font-size:28px;color:var(--sun);}
+.stat-box .sk{font-size:12px;color:#94a3b8;margin-top:2px;}
+
+/* ───── PARTICLES ───── */
+.particle{position:fixed;pointer-events:none;z-index:999;font-size:24px;animation:particleFly 1s ease-out forwards;}
+@keyframes particleFly{from{opacity:1;transform:translate(0,0) scale(1)}to{opacity:0;transform:translate(var(--dx),var(--dy)) scale(0)}}
+</style>
+</head>
+<body>
+
+<!-- Stars -->
+<div class="stars" id="stars"></div>
+<!-- Combo -->
+<div class="combo" id="combo">🔥 COMBO x<span id="combo-n">2</span></div>
+
+<!-- ═══ SPLASH ═══ -->
+<div id="splash" class="screen active">
+  <!-- clouds -->
+  <div class="cloud" style="width:90px;height:28px;top:80px;--spd:12s;opacity:.4"></div>
+  <div class="cloud" style="width:60px;height:20px;top:140px;--spd:18s;animation-delay:-6s;opacity:.3"></div>
+
+  <div style="height:24px"></div>
+  <div class="game-title">AVENTURA<br>DOS VERBOS</div>
+  <div class="game-sub">6º Ano — Português</div>
+
+  <div class="splash-scene">
+    <div class="mtn1"></div><div class="mtn2"></div><div class="mtn3"></div>
+    <div class="moon"></div>
+    <div class="hero">
+      <svg width="90" height="110" viewBox="0 0 90 110">
+        <!-- body -->
+        <ellipse cx="45" cy="75" rx="22" ry="28" fill="#457b9d"/>
+        <!-- head -->
+        <circle cx="45" cy="38" r="24" fill="#f4a261"/>
+        <!-- eyes -->
+        <circle cx="37" cy="34" r="4" fill="#1d3557"/>
+        <circle cx="53" cy="34" r="4" fill="#1d3557"/>
+        <circle cx="38.5" cy="32.5" r="1.5" fill="#fff"/>
+        <circle cx="54.5" cy="32.5" r="1.5" fill="#fff"/>
+        <!-- smile -->
+        <path d="M38 44 Q45 50 52 44" stroke="#1d3557" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <!-- book -->
+        <rect x="24" y="78" width="28" height="20" rx="3" fill="#e63946"/>
+        <rect x="24" y="78" width="14" height="20" rx="2" fill="#c1121f"/>
+        <line x1="38" y1="78" x2="38" y2="98" stroke="#fff" stroke-width="1"/>
+        <!-- arms -->
+        <ellipse cx="20" cy="80" rx="8" ry="6" fill="#f4a261" transform="rotate(-20 20 80)"/>
+        <ellipse cx="70" cy="80" rx="8" ry="6" fill="#f4a261" transform="rotate(20 70 80)"/>
+        <!-- hat -->
+        <rect x="30" y="10" width="30" height="6" rx="3" fill="#1d3557"/>
+        <rect x="36" y="4" width="18" height="10" rx="3" fill="#1d3557"/>
+        <!-- star on hat -->
+        <text x="44" y="11" text-anchor="middle" font-size="7" fill="#f9ca24">★</text>
+      </svg>
+    </div>
+  </div>
+
+  <div style="font-size:13px;color:#a8dadc;text-align:center;max-width:300px;line-height:1.7;z-index:2;position:relative;">
+    Aprenda verbos de forma divertida!<br>
+    Identifique, conjugue e classifique.
+  </div>
+
+  <div style="font-size:13px;color:#94a3b8;z-index:2;position:relative;margin-top:4px;">Escolha o modo:</div>
+  <div class="mode-row">
+    <div class="mode-btn selected" data-mode="mix" onclick="selectMode(this,'mix')">
+      <span class="mode-icon">🎲</span>
+      <div class="mode-name">Misto</div>
+      <div class="mode-desc">Todos os tópicos</div>
+    </div>
+    <div class="mode-btn" data-mode="identify" onclick="selectMode(this,'identify')">
+      <span class="mode-icon">🔍</span>
+      <div class="mode-name">Identificar</div>
+      <div class="mode-desc">Ache o verbo</div>
+    </div>
+    <div class="mode-btn" data-mode="conjugate" onclick="selectMode(this,'conjugate')">
+      <span class="mode-icon">✏️</span>
+      <div class="mode-name">Conjugar</div>
+      <div class="mode-desc">Complete a forma</div>
+    </div>
+    <div class="mode-btn" data-mode="classify" onclick="selectMode(this,'classify')">
+      <span class="mode-icon">📚</span>
+      <div class="mode-name">Classificar</div>
+      <div class="mode-desc">Tempo verbal</div>
+    </div>
+  </div>
+  <button class="btn-start" onclick="startGame()">JOGAR AGORA ▶</button>
+  <div style="height:30px"></div>
+</div>
+
+<!-- ═══ GAME ═══ -->
+<div id="game" class="screen">
+  <div class="hud">
+    <div class="hud-stat hud-life"><span class="icon">❤️</span><span id="lives">3</span></div>
+    <div class="progress-wrap"><div class="progress-bar" id="progress" style="width:0%"></div></div>
+    <div class="hud-stat hud-score"><span class="icon">⭐</span><span id="score">0</span></div>
+    <div class="hud-stat hud-level" style="margin-left:8px"><span class="icon">📖</span><span id="level-n">1</span></div>
+  </div>
+  <div class="game-content">
+    <div class="q-card" id="q-card">
+      <div class="q-number" id="q-num">Questão 1 de 15</div>
+      <div class="q-scene" id="q-scene">🌟</div>
+      <div class="q-text" id="q-text"></div>
+      <div class="q-tag" id="q-tag"></div>
+    </div>
+    <div class="answers" id="answers"></div>
+    <div class="feedback" id="feedback">
+      <div class="feedback-icon" id="fb-icon"></div>
+      <div><div class="feedback-title" id="fb-title"></div><div class="feedback-text" id="fb-text"></div></div>
+    </div>
+    <button class="btn-next" id="btn-next" onclick="nextQuestion()">PRÓXIMA →</button>
+  </div>
+</div>
+
+<!-- ═══ RESULT ═══ -->
+<div id="result" class="screen">
+  <div class="result-trophy" id="trophy">🏆</div>
+  <div class="result-title" id="result-title">PARABÉNS!</div>
+  <div class="result-stars" id="result-stars">⭐⭐⭐</div>
+  <div class="result-score-big" id="result-score">0 pts</div>
+  <div class="result-msg" id="result-msg"></div>
+  <div class="result-stats">
+    <div class="stat-box"><div class="sv" id="r-correct">0</div><div class="sk">Acertos</div></div>
+    <div class="stat-box"><div class="sv" id="r-wrong">0</div><div class="sk">Erros</div></div>
+    <div class="stat-box"><div class="sv" id="r-combo">0</div><div class="sk">Combo máx.</div></div>
+  </div>
+  <button class="btn-start" onclick="restartGame()" style="margin-top:8px">JOGAR NOVAMENTE 🔄</button>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  QUESTION BANK
+// ══════════════════════════════════════════════
+const QUESTIONS = [
+  // ══ IDENTIFICAR ══
+  {type:'identify', scene:'🏃',
+   text:'Qual palavra é um <strong>VERBO</strong> nesta frase?\n"O menino <u>corre</u> no parque toda tarde."',
+   tag:'🔍 Identificação',
+   options:['menino','corre','parque','tarde'],
+   correct:1,
+   explanation:'CORRE é o verbo — indica a ação praticada pelo sujeito "o menino".',
+   glow:'#00cec922'},
+
+  {type:'identify', scene:'🎨',
+   text:'Qual é o <strong>VERBO</strong> da frase?\n"A artista <u>pintou</u> um lindo quadro."',
+   tag:'🔍 Identificação',
+   options:['artista','lindo','quadro','pintou'],
+   correct:3,
+   explanation:'PINTOU é o verbo — expressa a ação realizada no passado.',
+   glow:'#6c5ce722'},
+
+  {type:'identify', scene:'📚',
+   text:'Encontre o <strong>VERBO</strong>:\n"Nós <u>estudamos</u> português ontem."',
+   tag:'🔍 Identificação',
+   options:['Nós','português','ontem','estudamos'],
+   correct:3,
+   explanation:'ESTUDAMOS é o verbo conjugado na 1ª pessoa do plural.',
+   glow:'#00b89422'},
+
+  {type:'identify', scene:'🌧️',
+   text:'Qual palavra é o <strong>VERBO</strong>?\n"Amanhã vai <u>chover</u> muito forte."',
+   tag:'🔍 Identificação',
+   options:['Amanhã','muito','forte','chover'],
+   correct:3,
+   explanation:'CHOVER é o verbo — indica um processo da natureza no futuro.',
+   glow:'#457b9d22'},
+
+  {type:'identify', scene:'🐕',
+   text:'Encontre o <strong>VERBO</strong>:\n"O cachorro <u>latiu</u> durante a noite."',
+   tag:'🔍 Identificação',
+   options:['cachorro','noite','latiu','durante'],
+   correct:2,
+   explanation:'LATIU é o verbo — expressa a ação do sujeito "o cachorro".',
+   glow:'#e1705522'},
+
+  {type:'identify', scene:'🎵',
+   text:'Qual é o <strong>VERBO</strong>?\n"A criança <u>cantou</u> uma bela música."',
+   tag:'🔍 Identificação',
+   options:['criança','bela','música','cantou'],
+   correct:3,
+   explanation:'CANTOU é o verbo — indica a ação de cantar realizada no passado.',
+   glow:'#fd79a822'},
+
+  {type:'identify', scene:'🌺',
+   text:'Encontre o <strong>VERBO</strong>:\n"As flores <u>perfumam</u> o jardim de manhã."',
+   tag:'🔍 Identificação',
+   options:['flores','jardim','manhã','perfumam'],
+   correct:3,
+   explanation:'PERFUMAM é o verbo — expressa a ação das flores no presente.',
+   glow:'#27ae6022'},
+
+  {type:'identify', scene:'⚽',
+   text:'Qual palavra é o <strong>VERBO</strong>?\n"Os jogadores <u>treinaram</u> muito antes do jogo."',
+   tag:'🔍 Identificação',
+   options:['jogadores','muito','treinaram','jogo'],
+   correct:2,
+   explanation:'TREINARAM é o verbo — ação concluída no passado.',
+   glow:'#00cec922'},
+
+  {type:'identify', scene:'🍎',
+   text:'Encontre o <strong>VERBO</strong>:\n"Pedro <u>comeu</u> a maçã com pressa."',
+   tag:'🔍 Identificação',
+   options:['Pedro','maçã','pressa','comeu'],
+   correct:3,
+   explanation:'COMEU é o verbo — indica a ação de Pedro no passado.',
+   glow:'#e6394622'},
+
+  {type:'identify', scene:'🌊',
+   text:'Qual é o <strong>VERBO</strong>?\n"As ondas <u>batem</u> nas pedras do cais."',
+   tag:'🔍 Identificação',
+   options:['ondas','pedras','cais','batem'],
+   correct:3,
+   explanation:'BATEM é o verbo — expressa a ação das ondas no presente.',
+   glow:'#457b9d22'},
+
+  {type:'identify', scene:'✈️',
+   text:'Encontre o <strong>VERBO</strong>:\n"Minha família <u>viajará</u> para o nordeste nas férias."',
+   tag:'🔍 Identificação',
+   options:['família','nordeste','férias','viajará'],
+   correct:3,
+   explanation:'VIAJARÁ é o verbo — ação que vai acontecer no futuro.',
+   glow:'#6c5ce722'},
+
+  {type:'identify', scene:'🎭',
+   text:'Qual é o <strong>VERBO</strong>?\n"Os alunos <u>apresentaram</u> uma peça de teatro."',
+   tag:'🔍 Identificação',
+   options:['alunos','peça','teatro','apresentaram'],
+   correct:3,
+   explanation:'APRESENTARAM é o verbo — ação concluída no passado.',
+   glow:'#f9ca2422'},
+
+  {type:'identify', scene:'🌙',
+   text:'Encontre o <strong>VERBO</strong>:\n"Ele <u>dormiu</u> tranquilamente a noite toda."',
+   tag:'🔍 Identificação',
+   options:['tranquilamente','noite','toda','dormiu'],
+   correct:3,
+   explanation:'DORMIU é o verbo — indica a ação de dormir no passado.',
+   glow:'#a29bfe22'},
+
+  {type:'identify', scene:'🐦',
+   text:'Qual palavra é o <strong>VERBO</strong>?\n"Os pássaros <u>voam</u> alto no céu azul."',
+   tag:'🔍 Identificação',
+   options:['pássaros','alto','azul','voam'],
+   correct:3,
+   explanation:'VOAM é o verbo — indica a ação dos pássaros no presente.',
+   glow:'#00b89422'},
+
+  {type:'identify', scene:'💧',
+   text:'Encontre o <strong>VERBO</strong>:\n"A chuva <u>molhou</u> o chão da escola."',
+   tag:'🔍 Identificação',
+   options:['chuva','chão','escola','molhou'],
+   correct:3,
+   explanation:'MOLHOU é o verbo — ação concluída da chuva no passado.',
+   glow:'#457b9d22'},
+
+  // ══ CONJUGAR ══
+  {type:'conjugate', scene:'😊',
+   text:'Complete com a forma correta:\n"Eu ___ muito feliz hoje." (verbo SER)',
+   tag:'✏️ Conjugação',
+   options:['és','são','sou','somos'],
+   correct:2,
+   explanation:'"SOU" é a conjugação de SER na 1ª pessoa do singular do Presente.',
+   glow:'#f9ca2422'},
+
+  {type:'conjugate', scene:'🏫',
+   text:'Complete a frase:\n"Elas ___ para a escola todos os dias." (verbo IR)',
+   tag:'✏️ Conjugação',
+   options:['vai','vou','vamos','vão'],
+   correct:3,
+   explanation:'"VÃO" é a conjugação de IR na 3ª pessoa do plural do Presente.',
+   glow:'#fd79a822'},
+
+  {type:'conjugate', scene:'🍕',
+   text:'Conjugue no passado:\n"Ontem, nós ___ pizza." (verbo COMER)',
+   tag:'✏️ Conjugação — Passado',
+   options:['comemos','comem','comeremos','comia'],
+   correct:0,
+   explanation:'"COMEMOS" é o Pretérito Perfeito, 1ª pessoa do plural. Ação concluída!',
+   glow:'#e6394622'},
+
+  {type:'conjugate', scene:'🌙',
+   text:'Complete no futuro:\n"Amanhã eu ___ cedo." (verbo ACORDAR)',
+   tag:'✏️ Conjugação — Futuro',
+   options:['acordei','acordava','acordarei','acordo'],
+   correct:2,
+   explanation:'"ACORDAREI" é o Futuro do Presente, 1ª pessoa singular.',
+   glow:'#6c5ce722'},
+
+  {type:'conjugate', scene:'📖',
+   text:'Pretérito Imperfeito:\n"Quando criança, ela ___ muito." (verbo LER)',
+   tag:'✏️ Conjugação — Imperfeito',
+   options:['leu','lerá','lia','lê'],
+   correct:2,
+   explanation:'"LIA" é o Pretérito Imperfeito — hábito que se repetia no passado.',
+   glow:'#00cec922'},
+
+  {type:'conjugate', scene:'🎮',
+   text:'Complete a frase:\n"Ontem à tarde, eu ___ videogame." (verbo JOGAR)',
+   tag:'✏️ Conjugação — Passado',
+   options:['jogo','jogarei','joguei','jogava'],
+   correct:2,
+   explanation:'"JOGUEI" é o Pretérito Perfeito de JOGAR — ação pontual concluída.',
+   glow:'#fd79a822'},
+
+  {type:'conjugate', scene:'🏊',
+   text:'Futuro do presente:\n"No verão, nós ___ todos os dias." (verbo NADAR)',
+   tag:'✏️ Conjugação — Futuro',
+   options:['nadamos','nadávamos','nadaremos','nadamos'],
+   correct:2,
+   explanation:'"NADAREMOS" é o Futuro do Presente, 1ª pessoa do plural.',
+   glow:'#00b89422'},
+
+  {type:'conjugate', scene:'🎂',
+   text:'Complete com a forma correta:\n"Tu ___ anos hoje!" (verbo FAZER)',
+   tag:'✏️ Conjugação',
+   options:['faz','fazes','faço','fazem'],
+   correct:1,
+   explanation:'"FAZES" é a conjugação de FAZER na 2ª pessoa do singular do Presente.',
+   glow:'#f9ca2422'},
+
+  {type:'conjugate', scene:'📱',
+   text:'Imperfeito do passado:\n"Antigamente, as pessoas não ___ celular." (verbo TER)',
+   tag:'✏️ Conjugação — Imperfeito',
+   options:['têm','tiveram','tinham','terão'],
+   correct:2,
+   explanation:'"TINHAM" é o Pretérito Imperfeito de TER — hábito que não existia no passado.',
+   glow:'#e1705522'},
+
+  {type:'conjugate', scene:'🚂',
+   text:'Complete no passado:\n"O trem ___ atrasado ontem." (verbo CHEGAR)',
+   tag:'✏️ Conjugação — Passado',
+   options:['chega','chegará','chegou','chegava'],
+   correct:2,
+   explanation:'"CHEGOU" é o Pretérito Perfeito de CHEGAR — ação pontual do passado.',
+   glow:'#6c5ce722'},
+
+  {type:'conjugate', scene:'🌟',
+   text:'Complete a frase:\n"Você ___ estudar mais para a prova." (verbo PRECISAR)',
+   tag:'✏️ Conjugação',
+   options:['preciso','precisas','precisam','precisa'],
+   correct:3,
+   explanation:'"PRECISA" é a conjugação de PRECISAR na 2ª/3ª pessoa singular do Presente.',
+   glow:'#a29bfe22'},
+
+  {type:'conjugate', scene:'🎸',
+   text:'Pretérito imperfeito:\n"Meu avô ___ violão toda noite." (verbo TOCAR)',
+   tag:'✏️ Conjugação — Imperfeito',
+   options:['toca','tocou','tocará','tocava'],
+   correct:3,
+   explanation:'"TOCAVA" é o Pretérito Imperfeito — hábito que se repetia no passado.',
+   glow:'#e6394622'},
+
+  {type:'conjugate', scene:'🏡',
+   text:'Complete no futuro:\n"Eles ___ uma casa nova no próximo ano." (verbo CONSTRUIR)',
+   tag:'✏️ Conjugação — Futuro',
+   options:['constroem','construíram','construirão','construíam'],
+   correct:2,
+   explanation:'"CONSTRUIRÃO" é o Futuro do Presente, 3ª pessoa do plural.',
+   glow:'#27ae6022'},
+
+  {type:'conjugate', scene:'🦁',
+   text:'Complete a frase:\n"O leão ___ na floresta com sua família." (verbo VIVER)',
+   tag:'✏️ Conjugação',
+   options:['viveu','vivia','vive','viverá'],
+   correct:2,
+   explanation:'"VIVE" é o Presente do Indicativo — fato geral e habitual.',
+   glow:'#00cec922'},
+
+  {type:'conjugate', scene:'🌈',
+   text:'Pretérito perfeito:\n"Ontem, eu ___ um arco-íris lindo." (verbo VER)',
+   tag:'✏️ Conjugação — Passado',
+   options:['vejo','via','verei','vi'],
+   correct:3,
+   explanation:'"VI" é o Pretérito Perfeito irregular de VER — ação concluída.',
+   glow:'#fd79a822'},
+
+  {type:'conjugate', scene:'💤',
+   text:'Complete a frase:\n"Eu não ___ dormir com barulho." (verbo CONSEGUIR)',
+   tag:'✏️ Conjugação',
+   options:['consegues','conseguem','consigo','consegue'],
+   correct:2,
+   explanation:'"CONSIGO" é a conjugação de CONSEGUIR na 1ª pessoa do singular do Presente.',
+   glow:'#457b9d22'},
+
+  // ══ CLASSIFICAR ══
+  {type:'classify', scene:'⏰',
+   text:'Em que tempo verbal está o verbo destacado?\n"Maria <strong>estuda</strong> todos os dias."',
+   tag:'📚 Tempo Verbal',
+   options:['Futuro do Presente','Pretérito Perfeito','Presente do Indicativo','Pretérito Imperfeito'],
+   correct:2,
+   explanation:'ESTUDA está no Presente do Indicativo — ação habitual que ocorre agora.',
+   glow:'#00b89422'},
+
+  {type:'classify', scene:'🕰️',
+   text:'Identifique o tempo verbal:\n"Eles <strong>viajaram</strong> para o Rio no verão."',
+   tag:'📚 Tempo Verbal',
+   options:['Presente','Pretérito Perfeito','Futuro','Pretérito Imperfeito'],
+   correct:1,
+   explanation:'VIAJARAM está no Pretérito Perfeito — ação que foi CONCLUÍDA no passado.',
+   glow:'#27ae6022'},
+
+  {type:'classify', scene:'🔮',
+   text:'Qual é o tempo verbal?\n"Nós <strong>viajaremos</strong> nas férias."',
+   tag:'📚 Tempo Verbal',
+   options:['Presente','Pretérito Perfeito','Futuro do Presente','Pretérito Imperfeito'],
+   correct:2,
+   explanation:'VIAJAREMOS está no Futuro do Presente — algo que ainda vai acontecer.',
+   glow:'#a29bfe22'},
+
+  {type:'classify', scene:'💭',
+   text:'Classifique o tempo verbal:\n"Quando pequeno, eu <strong>brincava</strong> muito."',
+   tag:'📚 Tempo Verbal',
+   options:['Presente','Pretérito Perfeito','Futuro','Pretérito Imperfeito'],
+   correct:3,
+   explanation:'BRINCAVA está no Pretérito Imperfeito — hábito que se repetia no passado.',
+   glow:'#e1705522'},
+
+  {type:'classify', scene:'🎯',
+   text:'Qual tempo verbal é usado?\n"Ela <strong>está</strong> feliz agora."',
+   tag:'📚 Tempo Verbal',
+   options:['Futuro','Pretérito Perfeito','Pretérito Imperfeito','Presente do Indicativo'],
+   correct:3,
+   explanation:'ESTÁ está no Presente do Indicativo — estado que ocorre no momento.',
+   glow:'#f9ca2422'},
+
+  {type:'classify', scene:'🎪',
+   text:'Qual o tempo verbal?\n"O palhaço <strong>fará</strong> uma apresentação amanhã."',
+   tag:'📚 Tempo Verbal',
+   options:['Pretérito Imperfeito','Presente','Futuro do Presente','Pretérito Perfeito'],
+   correct:2,
+   explanation:'FARÁ está no Futuro do Presente — ação que acontecerá depois.',
+   glow:'#fd79a822'},
+
+  {type:'classify', scene:'🧁',
+   text:'Classifique o tempo verbal:\n"Minha mãe <strong>fazia</strong> bolo todo domingo."',
+   tag:'📚 Tempo Verbal',
+   options:['Presente','Pretérito Perfeito','Futuro','Pretérito Imperfeito'],
+   correct:3,
+   explanation:'FAZIA está no Pretérito Imperfeito — hábito repetido no passado.',
+   glow:'#e6394622'},
+
+  {type:'classify', scene:'🏅',
+   text:'Qual tempo verbal está em uso?\n"João <strong>ganhou</strong> a medalha de ouro."',
+   tag:'📚 Tempo Verbal',
+   options:['Presente','Pretérito Perfeito','Futuro','Pretérito Imperfeito'],
+   correct:1,
+   explanation:'GANHOU está no Pretérito Perfeito — vitória concluída e pontual.',
+   glow:'#f9ca2422'},
+
+  {type:'classify', scene:'🌻',
+   text:'Classifique o verbo em destaque:\n"As plantas <strong>crescem</strong> com água e sol."',
+   tag:'📚 Tempo Verbal',
+   options:['Pretérito Perfeito','Futuro','Pretérito Imperfeito','Presente do Indicativo'],
+   correct:3,
+   explanation:'CRESCEM está no Presente do Indicativo — fato habitual e verdadeiro.',
+   glow:'#27ae6022'},
+
+  {type:'classify', scene:'🚀',
+   text:'Qual é o tempo verbal?\n"Os astronautas <strong>pousar</strong>ão na lua em breve."',
+   tag:'📚 Tempo Verbal',
+   options:['Pretérito Imperfeito','Pretérito Perfeito','Presente','Futuro do Presente'],
+   correct:3,
+   explanation:'POUSAR Ã O está no Futuro do Presente — ação que ainda acontecerá.',
+   glow:'#6c5ce722'},
+
+  {type:'classify', scene:'📻',
+   text:'Classifique o verbo:\n"Antigamente, as pessoas <strong>ouviam</strong> rádio à noite."',
+   tag:'📚 Tempo Verbal',
+   options:['Presente','Pretérito Perfeito','Pretérito Imperfeito','Futuro'],
+   correct:2,
+   explanation:'OUVIAM está no Pretérito Imperfeito — hábito do passado que não existe mais.',
+   glow:'#e1705522'},
+
+  {type:'classify', scene:'🎓',
+   text:'Identifique o tempo verbal:\n"Ela <strong>formou</strong> em Medicina no ano passado."',
+   tag:'📚 Tempo Verbal',
+   options:['Presente','Pretérito Imperfeito','Pretérito Perfeito','Futuro'],
+   correct:2,
+   explanation:'FORMOU está no Pretérito Perfeito — evento único e concluído.',
+   glow:'#00cec922'},
+
+  {type:'classify', scene:'🎠',
+   text:'Qual o tempo verbal?\n"Nós <strong>brincaremos</strong> no parque depois da aula."',
+   tag:'📚 Tempo Verbal',
+   options:['Pretérito Perfeito','Presente','Pretérito Imperfeito','Futuro do Presente'],
+   correct:3,
+   explanation:'BRINCAREMOS está no Futuro do Presente — plano para depois.',
+   glow:'#a29bfe22'},
+
+  // ══ CLASSE DO VERBO (BÔNUS) ══
+  {type:'classify', scene:'🧩',
+   text:'Como chamamos a forma do verbo em:\n"Pedro <strong>correu</strong> muito rápido"?',
+   tag:'📚 Modo Verbal',
+   options:['Infinitivo','Particípio','Gerúndio','Indicativo'],
+   correct:3,
+   explanation:'CORREU está no Modo Indicativo — expressa um fato real e concreto.',
+   glow:'#fd79a822'},
+
+  {type:'classify', scene:'🔑',
+   text:'Qual é a forma verbal na frase:\n"<strong>Estudar</strong> é muito importante."?',
+   tag:'📚 Forma Verbal',
+   options:['Gerúndio','Particípio','Infinitivo','Imperativo'],
+   correct:2,
+   explanation:'ESTUDAR é o Infinitivo — forma nominal do verbo, sem conjugação de pessoa.',
+   glow:'#27ae6022'},
+
+  {type:'classify', scene:'🎤',
+   text:'Que tipo de verbo é destacado:\n"<strong>Cante</strong> mais alto!"?',
+   tag:'📚 Modo Verbal',
+   options:['Indicativo','Subjuntivo','Imperativo','Condicional'],
+   correct:2,
+   explanation:'CANTE está no Modo Imperativo — expressa ordem ou pedido direto.',
+   glow:'#e6394622'},
+
+  {type:'identify', scene:'🌍',
+   text:'Qual é o <strong>VERBO</strong> nesta frase?\n"Os cientistas <u>descobriram</u> um novo planeta."',
+   tag:'🔍 Identificação',
+   options:['cientistas','novo','planeta','descobriram'],
+   correct:3,
+   explanation:'DESCOBRIRAM é o verbo — ação realizada pelos cientistas no passado.',
+   glow:'#6c5ce722'},
+
+  {type:'identify', scene:'🎃',
+   text:'Encontre o <strong>VERBO</strong>:\n"As crianças <u>adoram</u> fantasias de Halloween."',
+   tag:'🔍 Identificação',
+   options:['crianças','fantasias','Halloween','adoram'],
+   correct:3,
+   explanation:'ADORAM é o verbo — sentimento/ação das crianças no presente.',
+   glow:'#e1705522'},
+
+  {type:'conjugate', scene:'🏋️',
+   text:'Complete no presente:\n"Nós ___ na academia três vezes por semana." (verbo TREINAR)',
+   tag:'✏️ Conjugação',
+   options:['treino','treinaremos','treinamos','treinavam'],
+   correct:2,
+   explanation:'"TREINAMOS" é o Presente do Indicativo, 1ª pessoa do plural — hábito atual.',
+   glow:'#00cec922'},
+
+  {type:'conjugate', scene:'🌮',
+   text:'Pretérito perfeito:\n"Ela ___ tacos pela primeira vez ontem." (verbo EXPERIMENTAR)',
+   tag:'✏️ Conjugação — Passado',
+   options:['experimenta','experimentou','experimentava','experimentará'],
+   correct:1,
+   explanation:'"EXPERIMENTOU" é o Pretérito Perfeito — experiência única e concluída.',
+   glow:'#f9ca2422'},
+];
+
+const SCENES_BY_TYPE = {
+  identify: ['🔍','🕵️','👁️','🧐'],
+  conjugate: ['✍️','📝','🗣️','💬'],
+  classify: ['📚','🏷️','⏰','🗂️'],
+};
+
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+let mode='mix', gameQ=[], qIdx=0, score=0, lives=3, combo=0, maxCombo=0, correct=0, wrong=0;
+let answered=false;
+
+const TOTAL = 15;
+
+function selectMode(el, m){
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected'); mode=m;
+}
+
+function buildQueue(){
+  let pool = mode==='mix' ? [...QUESTIONS] :
+             QUESTIONS.filter(q=>q.type===mode);
+  // shuffle + repeat if not enough
+  let q=[];
+  while(q.length<TOTAL) q=[...q,...shuffle([...pool])];
+  return q.slice(0,TOTAL);
+}
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function startGame(){
+  gameQ=buildQueue(); qIdx=0; score=0; lives=3; combo=0; maxCombo=0; correct=0; wrong=0;
+  showScreen('game');
+  loadQuestion();
+}
+
+function restartGame(){ showScreen('splash'); }
+
+// ══════════════════════════════════════════════
+//  RENDER QUESTION
+// ══════════════════════════════════════════════
+function loadQuestion(){
+  answered=false;
+  const q=gameQ[qIdx];
+  // HUD
+  document.getElementById('lives').textContent='❤️'.repeat(lives);
+  document.getElementById('score').textContent=score;
+  document.getElementById('level-n').textContent=Math.floor(qIdx/5)+1;
+  document.getElementById('progress').style.width=((qIdx/TOTAL)*100)+'%';
+  document.getElementById('q-num').textContent=`Questão ${qIdx+1} de ${TOTAL}`;
+
+  // Card
+  const card=document.getElementById('q-card');
+  card.style.setProperty('--accent-glow',q.glow||'#ff6b6b22');
+  document.getElementById('q-scene').textContent=q.scene;
+  document.getElementById('q-scene').style.animation='none';
+  setTimeout(()=>document.getElementById('q-scene').style.animation='',10);
+  document.getElementById('q-text').innerHTML=q.text.replace(/\n/g,'<br>');
+  document.getElementById('q-tag').textContent=q.tag;
+
+  // Answers
+  const wrap=document.getElementById('answers');
+  wrap.innerHTML='';
+  const letters=['A','B','C','D'];
+  q.options.forEach((opt,i)=>{
+    const btn=document.createElement('button');
+    btn.className='ans-btn';
+    btn.innerHTML=`<span class="ans-letter">${letters[i]}</span>${opt}`;
+    btn.onclick=()=>answer(i,btn);
+    wrap.appendChild(btn);
+  });
+
+  // Feedback + next
+  const fb=document.getElementById('feedback');
+  fb.className='feedback'; fb.style.display='none';
+  const nx=document.getElementById('btn-next');
+  nx.className='btn-next';
+}
+
+function answer(idx,btn){
+  if(answered) return;
+  answered=true;
+  const q=gameQ[qIdx];
+  const btns=document.querySelectorAll('.ans-btn');
+  btns.forEach(b=>b.style.pointerEvents='none');
+
+  if(idx===q.correct){
+    btn.classList.add('correct');
+    combo++; maxCombo=Math.max(maxCombo,combo);
+    const pts = combo>1 ? 20*combo : 20;
+    score+=pts;
+    correct++;
+    document.getElementById('score').textContent=score;
+    showFeedback(true, q.explanation, pts);
+    if(combo>=2) showCombo(combo);
+    spawnParticles(btn,'✨🌟⭐');
+  } else {
+    btn.classList.add('wrong');
+    btns[q.correct].classList.add('reveal');
+    combo=0; lives--;
+    wrong++;
+    document.getElementById('lives').textContent='❤️'.repeat(Math.max(0,lives));
+    showFeedback(false, q.explanation);
+    if(lives<=0){ setTimeout(endGame,1200); return; }
+  }
+
+  document.getElementById('btn-next').className='btn-next show';
+}
+
+function showFeedback(ok, text, pts){
+  const fb=document.getElementById('feedback');
+  fb.style.display='';
+  fb.className='feedback show '+(ok?'ok':'bad');
+  document.getElementById('fb-icon').textContent=ok?'🎉':'💡';
+  document.getElementById('fb-title').textContent=ok
+    ? (pts>20?`INCRÍVEL! +${pts} pts (combo x${combo})!`:`CORRETO! +${pts} pts`)
+    : 'Quase lá!';
+  document.getElementById('fb-text').textContent=text;
+}
+
+function nextQuestion(){
+  qIdx++;
+  if(qIdx>=TOTAL) endGame();
+  else loadQuestion();
+}
+
+// ══════════════════════════════════════════════
+//  END GAME
+// ══════════════════════════════════════════════
+function endGame(){
+  showScreen('result');
+  const pct = correct/TOTAL;
+  const stars = pct>=.9?3:pct>=.6?2:1;
+  document.getElementById('trophy').textContent=stars===3?'🏆':stars===2?'🥈':'🥉';
+  document.getElementById('result-title').textContent=stars===3?'INCRÍVEL!':stars===2?'MUITO BOM!':'CONTINUE TENTANDO!';
+  document.getElementById('result-stars').textContent='⭐'.repeat(stars)+'☆'.repeat(3-stars);
+  document.getElementById('result-score').textContent=score+' pts';
+  const msgs=[
+    'Você dominou os verbos! Português é sua superpotência!',
+    'Ótimo desempenho! Pratique mais para dominar tudo!',
+    'Cada erro é um aprendizado. Tente novamente!'
+  ];
+  document.getElementById('result-msg').textContent=msgs[3-stars];
+  document.getElementById('r-correct').textContent=correct;
+  document.getElementById('r-wrong').textContent=wrong;
+  document.getElementById('r-combo').textContent=maxCombo;
+  if(stars===3) for(let i=0;i<20;i++) setTimeout(()=>launchConfetti(),i*80);
+}
+
+// ══════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showCombo(n){
+  const el=document.getElementById('combo');
+  document.getElementById('combo-n').textContent=n;
+  el.style.display='block';
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>el.style.display='none',1800);
+}
+
+function spawnParticles(el, emojis){
+  const r=el.getBoundingClientRect();
+  const cx=r.left+r.width/2, cy=r.top+r.height/2;
+  const chars=emojis.split('');
+  for(let i=0;i<6;i++){
+    const p=document.createElement('div');
+    p.className='particle';
+    p.textContent=chars[i%chars.length];
+    const angle=Math.random()*Math.PI*2;
+    const dist=60+Math.random()*80;
+    p.style.left=cx+'px'; p.style.top=cy+'px';
+    p.style.setProperty('--dx',Math.cos(angle)*dist+'px');
+    p.style.setProperty('--dy',Math.sin(angle)*dist-80+'px');
+    document.body.appendChild(p);
+    setTimeout(()=>p.remove(),1000);
+  }
+}
+
+function launchConfetti(){
+  const emojis=['🎉','🌟','✨','🎊','⭐','💫'];
+  const p=document.createElement('div');
+  p.className='particle';
+  p.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+  p.style.left=Math.random()*window.innerWidth+'px';
+  p.style.top='0px';
+  p.style.setProperty('--dx',(Math.random()-0.5)*200+'px');
+  p.style.setProperty('--dy',window.innerHeight*0.8+'px');
+  p.style.fontSize='28px';
+  p.style.animationDuration='1.5s';
+  document.body.appendChild(p);
+  setTimeout(()=>p.remove(),1600);
+}
+
+// ── Stars ──
+(()=>{
+  const c=document.getElementById('stars');
+  for(let i=0;i<80;i++){
+    const s=document.createElement('div');
+    s.className='star';
+    s.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;
+      width:${1+Math.random()*2}px;height:${1+Math.random()*2}px;
+      --d:${1.5+Math.random()*3}s;animation-delay:${Math.random()*3}s`;
+    c.appendChild(s);
+  }
+})();
+</script>
+</body>
+</html>
